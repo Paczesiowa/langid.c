@@ -1,7 +1,7 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <linux/limits.h>
 
@@ -301,29 +301,39 @@ LangID* load_model() {
     return NULL;
   }
 
-  char resolved_path[PATH_MAX];
+  char path[PATH_MAX];
+  if (!getcwd(path, PATH_MAX)) {
+    fprintf(stderr, "Error figuring out cwd");
+    return NULL;
+  }
+  char *end_of_cwd_path = path + strlen(path);
 
-  if (!load_nb_ptc(model, realpath("model/nb_ptc.bin", resolved_path))) {
+  strcpy(end_of_cwd_path, "/model/nb_ptc.bin");
+  if (!load_nb_ptc(model, path)) {
     free_model(model);
     return NULL;
   }
 
-  if (!load_nb_pc(model, realpath("model/nb_pc.bin", resolved_path))) {
+  strcpy(end_of_cwd_path, "/model/nb_pc.bin");
+  if (!load_nb_pc(model, path)) {
     free_model(model);
     return NULL;
   }
 
-  if (!load_nb_classes(model, realpath("model/nb_classes.bin", resolved_path))) {
+  strcpy(end_of_cwd_path, "/model/nb_classes.bin");
+  if (!load_nb_classes(model, path)) {
     free_model(model);
     return NULL;
   }
 
-  if (!load_tk_nextmove(model, realpath("model/tk_nextmove.bin", resolved_path))) {
+  strcpy(end_of_cwd_path, "/model/tk_nextmove.bin");
+  if (!load_tk_nextmove(model, path)) {
     free_model(model);
     return NULL;
   }
 
-  if (!load_tk_output(model, realpath("model/tk_output.bin", resolved_path))) {
+  strcpy(end_of_cwd_path, "/model/tk_output.bin");
+  if (!load_tk_output(model, path)) {
     free_model(model);
     return NULL;
   }
