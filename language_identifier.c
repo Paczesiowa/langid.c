@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -378,12 +379,70 @@ void check_model(LangID *model) {
   printf("%zu\n", model->nb_numfeats);
 }
 
+double classify(LangID *model, const char *text, char *language) {
+  int text_length = strlen(text);
+
+  uint32_t *arr = malloc(model->nb_numfeats * sizeof(uint32_t));
+  if (arr == NULL) {
+    fprintf(stderr, "Error allocating memory");
+    return -1;
+  }
+  memset(arr, 0, model->nb_numfeats * sizeof(uint32_t));
+
+  unsigned short state = 0;
+  int index;
+  for (int i = 0; i < text_length;  i++) {
+    state = model->tk_nextmove[(state << 8) + text[i]];
+    for (int j = 0; j < model->tk_output_max_tuple; j++) {
+      index = model->tk_output[state * model->tk_output_max_tuple + j];
+      if (index == -1) {
+        break;
+      }
+      arr[index]++;
+    }
+  }
+
+  double *pdc = malloc(model->nb_ptc_cols * sizeof(double));
+  if (pdc == NULL) {
+    fprintf(stderr, "Error allocating memory");
+    free(arr);
+    return -1;
+  }
+
+  int cl = 0;
+  for (int i = 0; i < model->nb_ptc_cols; i++) {
+    pdc[i] = model->nb_pc[i];
+    for (int j = 0; j < model->nb_ptc_rows; j++) {
+      pdc[i] += arr[j] * model->nb_ptc[j * model->nb_ptc_cols + i];
+    }
+    if (pdc[i] > pdc[cl]) {
+      cl = i;
+    }
+  }
+
+  double probability = pdc[cl];
+
+  free(pdc);
+  free(arr);
+
+  strncpy(language, (char *)&model->nb_classes[cl], 3);
+  return probability;
+}
+
+void check_output(LangID *model) {
+  char language[3];
+  char *text = "quick brown fox jumped over the lazy dog";
+  double probability = classify(model, text, language);
+  printf("The text '%s' has language %s (with probability %lf)\n", text, language, probability);
+}
+
 int main() {
   LangID* model = load_model();
   if (model == NULL) {
     return 1;
   }
-  check_model(model);
+  /* check_model(model); */
+  check_output(model);
   free_model(model);
   return 0;
 }

@@ -31,8 +31,7 @@ class LanguageIdentifier(object):
         for state in statecount:
             for index in self.tk_output.get(state, []):
                 arr[index] += statecount[state]
-        fv = arr
-        pdc = np.dot(fv, self.nb_ptc)
+        pdc = np.dot(arr, self.nb_ptc)
         probs = pdc + self.nb_pc
         cl = np.argmax(probs)
         conf = float(probs[cl])
@@ -94,11 +93,18 @@ class LanguageIdentifier(object):
                 print ''
         print self.nb_numfeats
 
+    def check_output(self):
+        text = 'quick brown fox jumped over the lazy dog'
+        language, probability = self.classify(text)
+        print ("The text '%s' has language %s (with probability %f)" % (
+            text, language, probability))
+
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
     if sys.argv[1] == 'check':
-        lid.check()
+        # lid.check()
+        lid.check_output()
     elif sys.argv[1] == 'split_models':
         lid.split_models('model')
     else:
