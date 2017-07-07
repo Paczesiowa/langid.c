@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include <linux/limits.h>
@@ -436,13 +437,28 @@ void check_output(LangID *model) {
   printf("The text '%s' has language %s (with probability %lf)\n", text, language, probability);
 }
 
+void benchmark(LangID *model) {
+  char language[3];
+  char *text = "quick brown fox jumped over the lazy dog";
+  struct timeval t0, t1;
+  gettimeofday(&t0, 0);
+  for (int i = 0; i < 100; i++) {
+    classify(model, text, language);
+  }
+  gettimeofday(&t1, 0);
+  long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
+  elapsed /= 100;
+  printf("%ld microseconds per run\n", elapsed);
+}
+
 int main() {
   LangID* model = load_model();
   if (model == NULL) {
     return 1;
   }
   /* check_model(model); */
-  check_output(model);
+  /* check_output(model); */
+  benchmark(model);
   free_model(model);
   return 0;
 }

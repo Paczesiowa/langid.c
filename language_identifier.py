@@ -3,6 +3,7 @@ from base64 import b64decode
 from bz2 import decompress
 from cPickle import loads
 from collections import defaultdict
+from timeit import timeit
 
 import numpy as np
 
@@ -99,6 +100,11 @@ class LanguageIdentifier(object):
         print ("The text '%s' has language %s (with probability %f)" % (
             text, language, probability))
 
+    def benchmark(self):
+        def foo():
+            self.classify('quick brown fox jumped over the lazy dog')
+
+        print '%.2fms' % round(timeit(foo, number=1000), 2)
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
@@ -107,6 +113,8 @@ if __name__ == '__main__':
         lid.check_output()
     elif sys.argv[1] == 'split_models':
         lid.split_models('model')
+    elif sys.argv[1] == 'benchmark':
+        lid.benchmark()
     else:
         print max(lid.tk_nextmove), lid.nb_numfeats
         pass
