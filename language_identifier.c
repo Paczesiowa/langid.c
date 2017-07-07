@@ -80,7 +80,9 @@ double *read_double(FILE *fp, double *value) {
 }
 
 LangID* load_nb_ptc(LangID* model, const char *nb_ptc_path) {
-  printf("Loading nb_ptc from %s\n", nb_ptc_path);
+  if (RELEASE) {
+    printf("Loading nb_ptc from %s\n", nb_ptc_path);
+  }
   FILE *fp = fopen(nb_ptc_path, "r");
   if (fp == NULL) {
     fprintf(stderr, "Error opening %s\n", nb_ptc_path);
@@ -121,7 +123,9 @@ LangID* load_nb_ptc(LangID* model, const char *nb_ptc_path) {
 }
 
 LangID* load_nb_pc(LangID* model, const char *nb_pc_path) {
-  printf("Loading nb_pc from %s\n", nb_pc_path);
+  if (RELEASE) {
+    printf("Loading nb_pc from %s\n", nb_pc_path);
+  }
   FILE *fp = fopen(nb_pc_path, "r");
   if (fp == NULL) {
     fprintf(stderr, "Error opening %s\n", nb_pc_path);
@@ -155,7 +159,9 @@ LangID* load_nb_pc(LangID* model, const char *nb_pc_path) {
 }
 
 LangID* load_nb_classes(LangID* model, const char *nb_classes_path) {
-  printf("Loading nb_classes from %s\n", nb_classes_path);
+  if (RELEASE) {
+    printf("Loading nb_classes from %s\n", nb_classes_path);
+  }
   FILE *fp = fopen(nb_classes_path, "r");
   if (fp == NULL) {
     fprintf(stderr, "Error opening %s\n", nb_classes_path);
@@ -196,7 +202,9 @@ LangID* load_nb_classes(LangID* model, const char *nb_classes_path) {
 }
 
 LangID* load_tk_nextmove(LangID* model, const char *tk_nextmove_path) {
-  printf("Loading tk_nextmove from %s\n", tk_nextmove_path);
+  if (RELEASE) {
+    printf("Loading tk_nextmove from %s\n", tk_nextmove_path);
+  }
   FILE *fp = fopen(tk_nextmove_path, "r");
   if (fp == NULL) {
     fprintf(stderr, "Error opening %s\n", tk_nextmove_path);
@@ -230,7 +238,9 @@ LangID* load_tk_nextmove(LangID* model, const char *tk_nextmove_path) {
 }
 
 LangID* load_tk_output(LangID* model, const char *tk_output_path) {
-  printf("Loading tk_output from %s\n", tk_output_path);
+  if (RELEASE) {
+    printf("Loading tk_output from %s\n", tk_output_path);
+  }
   FILE *fp = fopen(tk_output_path, "r");
   if (fp == NULL) {
     fprintf(stderr, "Error opening %s\n", tk_output_path);
@@ -292,7 +302,9 @@ void free_model(LangID *model) {
 }
 
 LangID* load_model() {
-  printf("Loading model\n");
+  if (RELEASE) {
+    printf("Loading model\n");
+  }
 
   LangID* model = malloc(sizeof(LangID));
   if (model == NULL) {
@@ -451,14 +463,25 @@ void benchmark(LangID *model) {
   printf("%ld microseconds per run\n", elapsed);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
+    fprintf(stderr, "language_identifier check_model|check_output|benchmark\n");
+    return 1;
+  }
+
   LangID* model = load_model();
   if (model == NULL) {
     return 1;
   }
-  /* check_model(model); */
-  /* check_output(model); */
-  benchmark(model);
+
+  if (strcmp(argv[1], "check_model") == 0) {
+    check_model(model);
+  } else if (strcmp(argv[1], "check_output") == 0) {
+    check_output(model);
+  } else if (strcmp(argv[1], "benchmark") == 0) {
+    benchmark(model);
+  }
+
   free_model(model);
   return 0;
 }

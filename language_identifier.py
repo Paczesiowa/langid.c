@@ -71,7 +71,7 @@ class LanguageIdentifier(object):
                     except IndexError:
                         f.write('-1\n')
 
-    def check(self):
+    def check_model(self):
         print self.nb_ptc.shape[0], self.nb_ptc.shape[1]
         for i in xrange(self.nb_ptc.shape[0]):
             for j in xrange(self.nb_ptc.shape[1]):
@@ -108,13 +108,11 @@ class LanguageIdentifier(object):
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
-    if sys.argv[1] == 'check':
-        # lid.check()
+    if sys.argv[1] == 'check_model':
+        lid.check_model()
+    elif sys.argv[1] == 'check_output':
         lid.check_output()
     elif sys.argv[1] == 'split_models':
         lid.split_models('model')
     elif sys.argv[1] == 'benchmark':
         lid.benchmark()
-    else:
-        print max(lid.tk_nextmove), lid.nb_numfeats
-        pass
