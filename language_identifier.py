@@ -104,7 +104,8 @@ class LanguageIdentifier(object):
         def foo():
             self.classify('quick brown fox jumped over the lazy dog')
 
-        print '%.2fms' % round(timeit(foo, number=1000), 2)
+        print \
+            '%d microseconds per run' % round(timeit(foo, number=1000) * 1000)
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
