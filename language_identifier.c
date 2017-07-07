@@ -454,12 +454,13 @@ void benchmark(LangID *model) {
   char *text = "quick brown fox jumped over the lazy dog";
   struct timeval t0, t1;
   gettimeofday(&t0, 0);
-  for (int i = 0; i < 100; i++) {
+  int run_count = 5000;
+  for (int i = 0; i < run_count; i++) {
     classify(model, text, language);
   }
   gettimeofday(&t1, 0);
   long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
-  elapsed /= 100;
+  elapsed /= run_count;
   printf("%ld microseconds per run\n", elapsed);
 }
 

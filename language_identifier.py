@@ -3,7 +3,7 @@ from base64 import b64decode
 from bz2 import decompress
 from cPickle import loads
 from collections import defaultdict
-from timeit import timeit
+from datetime import datetime
 
 import numpy as np
 
@@ -101,11 +101,13 @@ class LanguageIdentifier(object):
             text, language, probability))
 
     def benchmark(self):
-        def foo():
+        run_count = 5000
+        t0 = datetime.now()
+        for _ in xrange(run_count):
             self.classify('quick brown fox jumped over the lazy dog')
-
-        print \
-            '%d microseconds per run' % round(timeit(foo, number=1000) * 1000)
+        t1 = datetime.now()
+        elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+        print '%d microseconds per run' % elapsed
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
