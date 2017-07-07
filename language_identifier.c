@@ -256,17 +256,14 @@ LangID* load_tk_output(LangID* model, const char *tk_output_path) {
     return NULL;
   }
 
-  int *tk_output_elem;
   /* read whole dict */
-  for (int i = 0; i <= model->tk_output_max_key; i++) {
-    tk_output_elem = (int *)&model->tk_output[i * model->tk_output_max_tuple];
-    for (int k = 0; k < 4; k++) {
-      if (!read_int(fp, tk_output_elem)) {
+  for (int i = 0; i <= model->tk_output_max_key; i++) { /* inclusive of max key */
+    for (int j = 0; j < model->tk_output_max_tuple; j++) {
+      if (!read_int(fp, &model->tk_output[i * model->tk_output_max_tuple] + j)) {
         printf("Error reading array value\n");
         fclose(fp);
         return NULL;
       }
-      tk_output_elem++;
     }
   }
   fclose(fp);
