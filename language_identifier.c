@@ -422,9 +422,9 @@ double classify(LangID *model, const char *text, char *language) {
     return -1;
   }
 
+  memcpy(pdc, model->nb_pc, model->nb_ptc_cols * sizeof(double));
   int cl = 0;
   for (int i = 0; i < model->nb_ptc_cols; i++) {
-    pdc[i] = model->nb_pc[i];
     for (int j = 0; j < model->nb_ptc_rows; j++) {
       pdc[i] += arr[j] * model->nb_ptc[i * model->nb_ptc_rows + j];
     }
