@@ -11,7 +11,7 @@ model/%.bin: language_identifier.py model.py
 	python language_identifier.py split_models
 
 language_identifier: language_identifier.c
-	gcc -march=native -O2 -Wall -ansi -pedantic -std=c99 language_identifier.c -o language_identifier -DRELEASE=${RELEASE}
+	gcc -march=native -O2 -Wall -ansi -pedantic -std=c99 language_identifier.c -o language_identifier -DRELEASE=${RELEASE} -latlcblas
 
 check: language_identifier $(MODEL)
 	bash -c "diff <(python language_identifier.py check_model) <(./language_identifier check_model)"

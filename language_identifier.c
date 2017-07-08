@@ -7,6 +7,8 @@
 
 #include <linux/limits.h>
 
+#include <atlas/cblas.h>
+
 typedef char lang_code[3];
 
 typedef struct LangID {
@@ -395,12 +397,12 @@ void check_model(LangID *model) {
 double classify(LangID *model, const char *text, char *language) {
   int text_length = strlen(text);
 
-  uint32_t *arr = malloc(model->nb_numfeats * sizeof(uint32_t));
+  double *arr = malloc(model->nb_numfeats * sizeof(double));
   if (arr == NULL) {
     fprintf(stderr, "Error allocating memory");
     return -1;
   }
-  memset(arr, 0, model->nb_numfeats * sizeof(uint32_t));
+  memset(arr, 0, model->nb_numfeats * sizeof(double));
 
   unsigned short state = 0;
   int index;
@@ -423,11 +425,11 @@ double classify(LangID *model, const char *text, char *language) {
   }
 
   memcpy(pdc, model->nb_pc, model->nb_ptc_cols * sizeof(double));
+  cblas_dgemv(CblasRowMajor, CblasTrans, model->nb_ptc_rows, model->nb_ptc_cols,
+              1.0, model->nb_ptc, model->nb_ptc_cols, arr, 1, 1.0, pdc, 1);
+
   int cl = 0;
   for (int i = 0; i < model->nb_ptc_cols; i++) {
-    for (int j = 0; j < model->nb_ptc_rows; j++) {
-      pdc[i] += arr[j] * model->nb_ptc[j * model->nb_ptc_cols + i];
-    }
     if (pdc[i] > pdc[cl]) {
       cl = i;
     }
