@@ -32,6 +32,10 @@ class LanguageIdentifier(object):
         for state in statecount:
             for index in self.tk_output.get(state, []):
                 arr[index] += statecount[state]
+        # pdc = np.zeros((self.nb_ptc.shape[1],), dtype='double')
+        # for i in xrange(len(pdc)):
+        #     for j in xrange(self.nb_ptc.shape[0]):
+        #         pdc[i] += arr[j] * self.nb_ptc[j, i]
         pdc = np.dot(arr, self.nb_ptc)
         probs = pdc + self.nb_pc
         cl = np.argmax(probs)
@@ -75,7 +79,7 @@ class LanguageIdentifier(object):
         print self.nb_ptc.shape[0], self.nb_ptc.shape[1]
         for i in xrange(self.nb_ptc.shape[0]):
             for j in xrange(self.nb_ptc.shape[1]):
-                print self.nb_ptc[i, j]
+                print 'nb_ptc[%d, %d] = %.2f' % (i, j, self.nb_ptc[i, j])
         print self.nb_pc.shape[0]
         for i in xrange(self.nb_pc.shape[0]):
             print self.nb_pc[i]
@@ -101,7 +105,7 @@ class LanguageIdentifier(object):
             text, language, probability))
 
     def benchmark(self):
-        run_count = 5000
+        run_count = 50
         t0 = datetime.now()
         for _ in xrange(run_count):
             self.classify('quick brown fox jumped over the lazy dog')

@@ -108,10 +108,10 @@ LangID* load_nb_ptc(LangID* model, const char *nb_ptc_path) {
     return NULL;
   }
 
-  /* read all matrix values in row-major order */
+  /* read all matrix values in column-major order */
   for (int i = 0; i < model->nb_ptc_rows; i++) {
     for (int j = 0; j < model->nb_ptc_cols; j++) {
-      if (!read_double(fp, &model->nb_ptc[i * model->nb_ptc_cols + j])) {
+      if (!read_double(fp, &model->nb_ptc[j * model->nb_ptc_rows + i])) {
         printf("Error reading matrix value\n");
         fclose(fp);
         return NULL;
@@ -358,7 +358,7 @@ void check_model(LangID *model) {
   printf("%zu %zu\n", model->nb_ptc_rows, model->nb_ptc_cols);
   for (int i = 0; i < model->nb_ptc_rows; i++) {
     for (int j = 0; j < model->nb_ptc_cols; j++) {
-      print_double(model->nb_ptc[i * model->nb_ptc_cols + j]);
+      printf("nb_ptc[%d, %d] = %.2f\n", i, j, model->nb_ptc[j * model->nb_ptc_rows + i]);
     }
   }
   printf("%zu\n", model->nb_pc_length);
@@ -426,7 +426,7 @@ double classify(LangID *model, const char *text, char *language) {
   for (int i = 0; i < model->nb_ptc_cols; i++) {
     pdc[i] = model->nb_pc[i];
     for (int j = 0; j < model->nb_ptc_rows; j++) {
-      pdc[i] += arr[j] * model->nb_ptc[j * model->nb_ptc_cols + i];
+      pdc[i] += arr[j] * model->nb_ptc[i * model->nb_ptc_rows + j];
     }
     if (pdc[i] > pdc[cl]) {
       cl = i;
@@ -454,7 +454,7 @@ void benchmark(LangID *model) {
   char *text = "quick brown fox jumped over the lazy dog";
   struct timeval t0, t1;
   gettimeofday(&t0, 0);
-  int run_count = 5000;
+  int run_count = 50;
   for (int i = 0; i < run_count; i++) {
     classify(model, text, language);
   }
