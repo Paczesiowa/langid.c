@@ -20,6 +20,6 @@ check: language_identifier $(MODEL)
 	./language_identifier benchmark
 
 clean:
-	rm -rf language_identifier model
+	rm -rf language_identifier model *.pyc
 
 .PHONY: check clean
