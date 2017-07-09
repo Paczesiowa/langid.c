@@ -437,13 +437,12 @@ double classify(LangID *model, const char *text, char *language, bool normalize)
       free(pdc);
       return -1;
     }
-    double sum;
+    double sum = 0.0;
     for (int i = 0; i < model->nb_ptc_cols; i++) {
-      sum = 0.0;
-      for (int j = 0; j < model->nb_ptc_cols; j++) {
-        sum += exp(pdc[j] - pdc[i]);
-      }
-      probs[i] = 1.0 / sum;
+      sum += exp(pdc[i]);
+    }
+    for (int i = 0; i < model->nb_ptc_cols; i++) {
+      probs[i] = 1.0 / (sum / exp(pdc[i]));
     }
     memcpy(pdc, probs, model->nb_ptc_cols * sizeof(double));
     free(probs);
