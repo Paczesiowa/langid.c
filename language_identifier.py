@@ -21,7 +21,7 @@ class LanguageIdentifier(object):
         self.nb_pc = np.array(nb_pc)
         self.nb_ptc = np.array(nb_ptc).reshape(self.nb_numfeats, len(self.nb_pc))
 
-    def classify(self, text):
+    def classify(self, text, normalize=False):
         text = map(ord, text)
         arr = np.zeros((self.nb_numfeats,), dtype='uint32')
         state = 0
@@ -34,6 +34,8 @@ class LanguageIdentifier(object):
                 arr[index] += statecount[state]
         pdc = np.dot(arr, self.nb_ptc)
         probs = pdc + self.nb_pc
+        if normalize:
+            probs = 1 / np.exp(probs[None, :] - probs[:, None]).sum(1)
         cl = np.argmax(probs)
         conf = float(probs[cl])
         pred = str(self.nb_classes[cl])
@@ -99,6 +101,9 @@ class LanguageIdentifier(object):
         language, probability = self.classify(text)
         print ("The text '%s' has language %s (with probability %f)" % (
             text, language, probability))
+        language, probability = self.classify(text, normalize=True)
+        print ("The text '%s' has language %s (with norm. probability %f)" % (
+            text, language, probability))
 
     def benchmark(self):
         run_count = 5000
@@ -108,6 +113,14 @@ class LanguageIdentifier(object):
         t1 = datetime.now()
         elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
         print '%d microseconds per run' % elapsed
+
+        t0 = datetime.now()
+        for _ in xrange(run_count):
+            self.classify('quick brown fox jumped over the lazy dog',
+                          normalize=True)
+        t1 = datetime.now()
+        elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+        print '%d microseconds per normalized run' % elapsed
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)

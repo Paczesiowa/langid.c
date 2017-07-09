@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -394,7 +395,7 @@ void check_model(LangID *model) {
   printf("%zu\n", model->nb_numfeats);
 }
 
-double classify(LangID *model, const char *text, char *language) {
+double classify(LangID *model, const char *text, char *language, bool normalize) {
   int text_length = strlen(text);
 
   double *arr = malloc(model->nb_numfeats * sizeof(double));
@@ -428,6 +429,26 @@ double classify(LangID *model, const char *text, char *language) {
   cblas_dgemv(CblasColMajor, CblasTrans, model->nb_ptc_rows, model->nb_ptc_cols,
               1.0, model->nb_ptc, model->nb_ptc_rows, arr, 1, 1.0, pdc, 1);
 
+  if (normalize) {
+    double *probs = malloc(model->nb_ptc_cols * sizeof(double));
+    if (probs == NULL) {
+      fprintf(stderr, "Error allocating memory");
+      free(arr);
+      free(pdc);
+      return -1;
+    }
+    double sum;
+    for (int i = 0; i < model->nb_ptc_cols; i++) {
+      sum = 0.0;
+      for (int j = 0; j < model->nb_ptc_cols; j++) {
+        sum += exp(pdc[j] - pdc[i]);
+      }
+      probs[i] = 1.0 / sum;
+    }
+    memcpy(pdc, probs, model->nb_ptc_cols * sizeof(double));
+    free(probs);
+  }
+
   int cl = 0;
   for (int i = 0; i < model->nb_ptc_cols; i++) {
     if (pdc[i] > pdc[cl]) {
@@ -447,8 +468,10 @@ double classify(LangID *model, const char *text, char *language) {
 void check_output(LangID *model) {
   char language[3];
   char *text = "quick brown fox jumped over the lazy dog";
-  double probability = classify(model, text, language);
+  double probability = classify(model, text, language, false);
   printf("The text '%s' has language %s (with probability %lf)\n", text, language, probability);
+  probability = classify(model, text, language, true);
+  printf("The text '%s' has language %s (with norm. probability %lf)\n", text, language, probability);
 }
 
 void benchmark(LangID *model) {
@@ -458,12 +481,21 @@ void benchmark(LangID *model) {
   gettimeofday(&t0, 0);
   int run_count = 5000;
   for (int i = 0; i < run_count; i++) {
-    classify(model, text, language);
+    classify(model, text, language, false);
   }
   gettimeofday(&t1, 0);
   long elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
   elapsed /= run_count;
   printf("%ld microseconds per run\n", elapsed);
+
+  gettimeofday(&t0, 0);
+  for (int i = 0; i < run_count; i++) {
+    classify(model, text, language, true);
+  }
+  gettimeofday(&t1, 0);
+  elapsed = (t1.tv_sec - t0.tv_sec) * 1000000 + t1.tv_usec - t0.tv_usec;
+  elapsed /= run_count;
+  printf("%ld microseconds per normalized run\n", elapsed);
 }
 
 int main(int argc, char *argv[]) {
