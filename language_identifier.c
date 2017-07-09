@@ -444,8 +444,8 @@ double classify(LangID *model, const char *text, char *language, bool normalize)
     for (int i = 0; i < model->nb_ptc_cols; i++) {
       probs[i] = 1.0 / (sum / exp(pdc[i]));
     }
-    memcpy(pdc, probs, model->nb_ptc_cols * sizeof(double));
-    free(probs);
+    free(pdc);
+    pdc = probs;
   }
 
   int cl = 0;
