@@ -439,10 +439,11 @@ double classify(LangID *model, const char *text, char *language, bool normalize)
     }
     double sum = 0.0;
     for (int i = 0; i < model->nb_ptc_cols; i++) {
-      sum += exp(pdc[i]);
+      probs[i] = exp(pdc[i]);
+      sum += probs[i];
     }
     for (int i = 0; i < model->nb_ptc_cols; i++) {
-      probs[i] = 1.0 / (sum / exp(pdc[i]));
+      probs[i] /= sum;
     }
     free(pdc);
     pdc = probs;
