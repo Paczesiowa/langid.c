@@ -94,19 +94,19 @@ LangID* load_nb_ptc(LangID* model, const char *nb_ptc_path) {
 
   /* read first 2 lines that have number of rows and columns */
   if (!read_size_t(fp, &model->nb_ptc_rows)) {
-    printf("Error reading number of rows\n");
+    fprintf(stderr, "Error reading number of rows\n");
     fclose(fp);
     return NULL;
   }
   if (!read_size_t(fp, &model->nb_ptc_cols)) {
-    printf("Error reading number of columns\n");
+    fprintf(stderr, "Error reading number of columns\n");
     fclose(fp);
     return NULL;
   }
 
   model->nb_ptc = malloc(model->nb_ptc_rows * model->nb_ptc_cols * sizeof(double));
   if (model->nb_ptc == NULL) {
-    printf("Error allocating memory\n");
+    fprintf(stderr, "Error allocating memory\n");
     fclose(fp);
     return NULL;
   }
@@ -115,7 +115,7 @@ LangID* load_nb_ptc(LangID* model, const char *nb_ptc_path) {
   for (int i = 0; i < model->nb_ptc_rows; i++) {
     for (int j = 0; j < model->nb_ptc_cols; j++) {
       if (!read_double(fp, &model->nb_ptc[j * model->nb_ptc_rows + i])) {
-        printf("Error reading matrix value\n");
+        fprintf(stderr, "Error reading matrix value\n");
         fclose(fp);
         return NULL;
       }
@@ -137,14 +137,14 @@ LangID* load_nb_pc(LangID* model, const char *nb_pc_path) {
 
   /* read first line that contains length */
   if (!read_size_t(fp, &model->nb_pc_length)) {
-    printf("Error reading length\n");
+    fprintf(stderr, "Error reading length\n");
     fclose(fp);
     return NULL;
   }
 
   model->nb_pc = malloc(model->nb_pc_length * sizeof(double));
   if (model->nb_pc == NULL) {
-    printf("Error allocating memory\n");
+    fprintf(stderr, "Error allocating memory\n");
     fclose(fp);
     return NULL;
   }
@@ -152,7 +152,7 @@ LangID* load_nb_pc(LangID* model, const char *nb_pc_path) {
   /* read whole array */
   for (int i = 0; i < model->nb_pc_length; i++) {
     if (!read_double(fp, &model->nb_pc[i])) {
-      printf("Error reading array value\n");
+      fprintf(stderr, "Error reading array value\n");
       fclose(fp);
       return NULL;
     }
@@ -173,14 +173,14 @@ LangID* load_nb_classes(LangID* model, const char *nb_classes_path) {
 
   /* read first line that contains length */
   if (!read_size_t(fp, &model->nb_classes_length)) {
-    printf("Error reading length\n");
+    fprintf(stderr, "Error reading length\n");
     fclose(fp);
     return NULL;
   }
 
   model->nb_classes = malloc(model->nb_classes_length * sizeof(lang_code));
   if (model->nb_classes == NULL) {
-    printf("Error allocating memory\n");
+    fprintf(stderr, "Error allocating memory\n");
     fclose(fp);
     return NULL;
   }
@@ -191,7 +191,7 @@ LangID* load_nb_classes(LangID* model, const char *nb_classes_path) {
   /* read whole array */
   for (int i = 0; i < model->nb_classes_length; i++) {
     if (!fgets(line, 4, fp)) {
-      printf("Error reading array value\n");
+      fprintf(stderr, "Error reading array value\n");
       fclose(fp);
       return NULL;
     }
@@ -216,14 +216,14 @@ LangID* load_tk_nextmove(LangID* model, const char *tk_nextmove_path) {
 
   /* read first line that contains length */
   if (!read_size_t(fp, &model->tk_nextmove_length)) {
-    printf("Error reading length\n");
+    fprintf(stderr, "Error reading length\n");
     fclose(fp);
     return NULL;
   }
 
   model->tk_nextmove = malloc(model->tk_nextmove_length * sizeof(unsigned short));
   if (model->tk_nextmove == NULL) {
-    printf("Error allocating memory\n");
+    fprintf(stderr, "Error allocating memory\n");
     fclose(fp);
     return NULL;
   }
@@ -231,7 +231,7 @@ LangID* load_tk_nextmove(LangID* model, const char *tk_nextmove_path) {
   /* read whole array */
   for (int i = 0; i < model->tk_nextmove_length; i++) {
     if (!read_ushort(fp, &model->tk_nextmove[i])) {
-      printf("Error reading array value\n");
+      fprintf(stderr, "Error reading array value\n");
       fclose(fp);
       return NULL;
     }
@@ -252,21 +252,21 @@ LangID* load_tk_output(LangID* model, const char *tk_output_path) {
 
   /* read first line that contains dict's max key value */
   if (!read_size_t(fp, &model->tk_output_max_key)) {
-    printf("Error reading max key value\n");
+    fprintf(stderr, "Error reading max key value\n");
     fclose(fp);
     return NULL;
   }
 
   /* read 2nd line that contains dict's value/tuple max size */
   if (!read_size_t(fp, &model->tk_output_max_tuple)) {
-    printf("Error reading tuple size\n");
+    fprintf(stderr, "Error reading tuple size\n");
     fclose(fp);
     return NULL;
   }
 
   model->tk_output = malloc((model->tk_output_max_key + 1) * model->tk_output_max_tuple * sizeof(int));
   if (model->tk_output == NULL) {
-    printf("Error allocating memory\n");
+    fprintf(stderr, "Error allocating memory\n");
     fclose(fp);
     return NULL;
   }
@@ -275,7 +275,7 @@ LangID* load_tk_output(LangID* model, const char *tk_output_path) {
   for (int i = 0; i <= model->tk_output_max_key; i++) { /* inclusive of max key */
     for (int j = 0; j < model->tk_output_max_tuple; j++) {
       if (!read_int(fp, &model->tk_output[i * model->tk_output_max_tuple] + j)) {
-        printf("Error reading array value\n");
+        fprintf(stderr, "Error reading array value\n");
         fclose(fp);
         return NULL;
       }
