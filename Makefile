@@ -18,6 +18,10 @@ check: language_identifier $(MODEL)
 	bash -c "diff <(python language_identifier.py check_output) <(./language_identifier check_output)"
 	python language_identifier.py benchmark
 	./language_identifier benchmark
+	python language_identifier.py check_http_output
+	python language_identifier.py check_zmq_output
+	python language_identifier.py benchmark_http
+	python language_identifier.py benchmark_zmq
 
 clean:
 	rm -rf language_identifier model *.pyc

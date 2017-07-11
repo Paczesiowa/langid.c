@@ -1,13 +1,57 @@
 import sys
+import zmq
+import requests
 from base64 import b64decode
 from bz2 import decompress
 from cPickle import loads
 from collections import defaultdict
 from datetime import datetime
-
+from urlparse import parse_qs
+from time import sleep
+import fapws._evwsgi as evwsgi
 import numpy as np
+from fapws import base
 
 from model import model
+from multiprocessing import Process
+
+
+http_server_address = 'http://127.0.0.1:10000/'
+zmq_server_address = 'tcp://127.0.0.1:5555'
+run_count = 5000
+
+
+def server_http():
+    lid = LanguageIdentifier(model)
+    headers = [('Content-type', 'text/javascript; charset=utf-8')]
+    status = '200 OK'
+
+    def application(environ, start_response):
+        params = parse_qs(environ['QUERY_STRING'])
+        text = params['q'][0]
+        normalize = params['normalize'][0] == 'true'
+        pred, conf = lid.classify(text, normalize=normalize)
+        start_response(status, headers)
+        return [pred + ' ' + str(conf)]
+
+    evwsgi.start('127.0.0.1', '10000')
+    evwsgi.set_base_module(base)
+    evwsgi.wsgi_cb(('', application))
+    evwsgi.set_debug(0)
+    evwsgi.run()
+
+
+def server_zmq():
+    lid = LanguageIdentifier(model)
+    context = zmq.Context()
+    socket = context.socket(zmq.REP)
+    socket.bind(zmq_server_address)
+    while True:
+        message = socket.recv()
+        normalize = message[0] == '1'
+        text = message[1:]
+        language, probability = lid.classify(text, normalize=normalize)
+        socket.send(bytes(language) + b' ' + bytes(probability))
 
 
 class LanguageIdentifier(object):
@@ -16,10 +60,12 @@ class LanguageIdentifier(object):
         b = b64decode(string)
         z = decompress(b)
         model = loads(z)
-        nb_ptc, nb_pc, self.nb_classes, self.tk_nextmove, self.tk_output = model
+        nb_ptc, nb_pc, self.nb_classes, self.tk_nextmove, self.tk_output = \
+            model
         self.nb_numfeats = int(len(nb_ptc) / len(nb_pc))
         self.nb_pc = np.array(nb_pc)
-        self.nb_ptc = np.array(nb_ptc).reshape(self.nb_numfeats, len(self.nb_pc))
+        self.nb_ptc = np.array(nb_ptc).reshape(self.nb_numfeats,
+                                               len(self.nb_pc))
 
     def classify(self, text, normalize=False):
         text = map(ord, text)
@@ -106,7 +152,6 @@ class LanguageIdentifier(object):
             text, language, probability))
 
     def benchmark(self):
-        run_count = 5000
         t0 = datetime.now()
         for _ in xrange(run_count):
             self.classify('quick brown fox jumped over the lazy dog')
@@ -122,6 +167,132 @@ class LanguageIdentifier(object):
         elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
         print '%d microseconds per normalized run' % elapsed
 
+    def check_http_output(self):
+        p = Process(target=server_http)
+        p.start()
+        sleep(3)
+
+        try:
+            text = 'quick brown fox jumped over the lazy dog'
+            language, probability = self.classify(text, normalize=False)
+            expected_output = language + ' ' + str(probability)
+
+            params = {'q': text, 'normalize': 'false'}
+            resp = requests.get(http_server_address, params=params).text
+            if resp != expected_output:
+                print 'Wrong output:', resp,
+                print '(should be:', expected_output + ')'
+
+            language, probability = self.classify(text, normalize=True)
+            expected_output = language + ' ' + str(probability)
+            params = {'q': text, 'normalize': 'true'}
+            resp = requests.get(http_server_address, params=params).text
+            if resp != expected_output:
+                print 'Wrong normalized output:', resp,
+                print '(should be:', expected_output + ')'
+        finally:
+            p.terminate()
+
+    def benchmark_http(self, keep_alive=False):
+        p = Process(target=server_http)
+        p.start()
+        sleep(3)
+        s = requests.Session() if keep_alive else requests
+
+        try:
+            text = 'quick brown fox jumped over the lazy dog'
+            params = {'q': text, 'normalize': 'false'}
+            t0 = datetime.now()
+            for _ in xrange(run_count):
+                s.get(http_server_address, params=params)
+            t1 = datetime.now()
+            elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+            if keep_alive:
+                msg = '%d microseconds per http call (with Keep-Alive)'
+            else:
+                msg = '%d microseconds per http call'
+            print msg % elapsed
+
+            params = {'q': text, 'normalize': 'true'}
+            t0 = datetime.now()
+            for _ in xrange(run_count):
+                s.get(http_server_address, params=params)
+            t1 = datetime.now()
+            elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+
+            if keep_alive:
+                msg = ('%d microseconds per normalized ' +
+                       'http call (with Keep-Alive)')
+            else:
+                msg = '%d microseconds per normalized http call'
+            print msg % elapsed
+        finally:
+            p.terminate()
+
+    def check_zmq_output(self):
+        p = Process(target=server_zmq)
+        p.start()
+        sleep(3)
+
+        try:
+            text = 'quick brown fox jumped over the lazy dog'
+            language, probability = self.classify(text, normalize=False)
+            expected_output = language + ' ' + str(probability)
+
+            context = zmq.Context()
+            socket = context.socket(zmq.REQ)
+            socket.connect(zmq_server_address)
+
+            msg = '0' + text
+            socket.send(msg)
+            resp = socket.recv()
+            if resp != expected_output:
+                print 'Wrong output:', resp,
+                print '(should be:', expected_output + ')'
+
+            language, probability = self.classify(text, normalize=True)
+            expected_output = language + ' ' + str(probability)
+            msg = '1' + text
+            socket.send(msg)
+            resp = socket.recv()
+            if resp != expected_output:
+                print 'Wrong normalized output:', resp,
+                print '(should be:', expected_output + ')'
+        finally:
+            p.terminate()
+
+    def benchmark_zmq(self):
+        p = Process(target=server_zmq)
+        p.start()
+        sleep(3)
+
+        try:
+            context = zmq.Context()
+            socket = context.socket(zmq.REQ)
+            socket.connect(zmq_server_address)
+
+            text = 'quick brown fox jumped over the lazy dog'
+            msg = '0' + text
+
+            t0 = datetime.now()
+            for _ in xrange(run_count):
+                socket.send(msg)
+                socket.recv()
+            t1 = datetime.now()
+            elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+            print '%d microseconds per 0mq call' % elapsed
+
+            msg = '1' + text
+            t0 = datetime.now()
+            for _ in xrange(run_count):
+                socket.send(msg)
+                socket.recv()
+            t1 = datetime.now()
+            elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
+            print '%d microseconds per normalized 0mq call' % elapsed
+        finally:
+            p.terminate()
+
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
     if sys.argv[1] == 'check_model':
@@ -132,3 +303,12 @@ if __name__ == '__main__':
         lid.split_models('model')
     elif sys.argv[1] == 'benchmark':
         lid.benchmark()
+    elif sys.argv[1] == 'check_http_output':
+        lid.check_http_output()
+    elif sys.argv[1] == 'benchmark_http':
+        lid.benchmark_http(keep_alive=False)
+        lid.benchmark_http(keep_alive=True)
+    elif sys.argv[1] == 'check_zmq_output':
+        lid.check_zmq_output()
+    elif sys.argv[1] == 'benchmark_zmq':
+        lid.benchmark_zmq()
