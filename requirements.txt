@@ -1,3 +1,4 @@
 numpy == 1.13.0
 fapws3 == 0.11dev0
 requests == 2.18.1
+pyzmq == 16.0.2

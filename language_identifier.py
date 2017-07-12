@@ -1,19 +1,21 @@
 import sys
-import zmq
-import requests
 from base64 import b64decode
 from bz2 import decompress
 from cPickle import loads
 from collections import defaultdict
 from datetime import datetime
-from urlparse import parse_qs
+from multiprocessing import Process
+from subprocess import Popen
 from time import sleep
+from urlparse import parse_qs
+
 import fapws._evwsgi as evwsgi
 import numpy as np
+import requests
+import zmq
 from fapws import base
 
 from model import model
-from multiprocessing import Process
 
 
 http_server_address = 'http://127.0.0.1:10000/'
@@ -51,7 +53,7 @@ def server_zmq():
         normalize = message[0] == '1'
         text = message[1:]
         language, probability = lid.classify(text, normalize=normalize)
-        socket.send(bytes(language) + b' ' + bytes(probability))
+        socket.send(bytes(language) + b' ' + '%.2f' % probability)
 
 
 class LanguageIdentifier(object):
@@ -229,15 +231,18 @@ class LanguageIdentifier(object):
         finally:
             p.terminate()
 
-    def check_zmq_output(self):
-        p = Process(target=server_zmq)
-        p.start()
+    def check_zmq_output(self, python_server):
+        if python_server:
+            p = Process(target=server_zmq)
+            p.start()
+        else:
+            p = Popen(['./language_identifier_zmq_server'])
         sleep(3)
 
         try:
             text = 'quick brown fox jumped over the lazy dog'
             language, probability = self.classify(text, normalize=False)
-            expected_output = language + ' ' + str(probability)
+            expected_output = language + ' ' + '%.2f' % probability
 
             context = zmq.Context()
             socket = context.socket(zmq.REQ)
@@ -251,7 +256,7 @@ class LanguageIdentifier(object):
                 print '(should be:', expected_output + ')'
 
             language, probability = self.classify(text, normalize=True)
-            expected_output = language + ' ' + str(probability)
+            expected_output = language + ' ' + '%.2f' % probability
             msg = '1' + text
             socket.send(msg)
             resp = socket.recv()
@@ -259,11 +264,17 @@ class LanguageIdentifier(object):
                 print 'Wrong normalized output:', resp,
                 print '(should be:', expected_output + ')'
         finally:
-            p.terminate()
+            if python_server:
+                p.terminate()
+            else:
+                p.kill()
 
-    def benchmark_zmq(self):
-        p = Process(target=server_zmq)
-        p.start()
+    def benchmark_zmq(self, python_server):
+        if python_server:
+            p = Process(target=server_zmq)
+            p.start()
+        else:
+            p = Popen(['./language_identifier_zmq_server'])
         sleep(3)
 
         try:
@@ -291,7 +302,10 @@ class LanguageIdentifier(object):
             elapsed = (t1 - t0).total_seconds() * (1000000. / run_count)
             print '%d microseconds per normalized 0mq call' % elapsed
         finally:
-            p.terminate()
+            if python_server:
+                p.terminate()
+            else:
+                p.kill()
 
 if __name__ == '__main__':
     lid = LanguageIdentifier(model)
@@ -309,6 +323,6 @@ if __name__ == '__main__':
         lid.benchmark_http(keep_alive=False)
         lid.benchmark_http(keep_alive=True)
     elif sys.argv[1] == 'check_zmq_output':
-        lid.check_zmq_output()
+        lid.check_zmq_output(python_server=sys.argv[2] == 'python_server')
     elif sys.argv[1] == 'benchmark_zmq':
-        lid.benchmark_zmq()
+        lid.benchmark_zmq(python_server=sys.argv[2] == 'python_server')
